@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VNG CMS - Firebase Cloud Realtime</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; overflow: hidden; }
+        .header-top { background: #ffffff; border-bottom: 1px solid #e2e8f0; }
+        .table-wrap { height: calc(100vh - 150px); overflow: auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding-bottom: 150px; }
+        thead th { position: sticky; top: 0; z-index: 20; background: #f1f5f9; border-bottom: 2px solid #cbd5e1; color: #475569; font-size: 11px; text-transform: uppercase; padding: 10px; }
+        .sticky-col-1 { position: sticky; left: 0; z-index: 15; background: #ffffff; border-right: 1px solid #e2e8f0; }
+        .sticky-col-2 { position: sticky; left: 70px; z-index: 15; background: #ffffff; border-right: 2px solid #e2e8f0; }
+        thead .sticky-col-1, thead .sticky-col-2 { background: #f1f5f9; z-index: 30; }
+        .input-cell { background: transparent; border: 1px solid transparent; width: 100%; outline: none; font-size: 13px; color: #0f172a; padding: 6px; border-radius: 4px; transition: 0.2s; }
+        .input-cell:hover { background: #f8fafc; border-color: #cbd5e1; }
+        .input-cell:focus { background: #ffffff; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1); }
+        .textarea-expand { resize: none; overflow: hidden; min-height: 32px; }
+        .textarea-expand:focus { position: absolute; z-index: 50; width: 350px; height: 120px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border-color: #2563eb; }
+        input[type="checkbox"] { accent-color: #2563eb; width: 14px; height: 14px; cursor: pointer; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .avatar-transition { transition: all 0.5s ease; }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col">
+
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-[#f1f5f9]">
+        <div class="w-full max-w-md p-8 bg-white rounded-xl text-center shadow-lg border border-slate-200">
+            <div class="w-16 h-16 bg-blue-600 rounded-xl mx-auto flex items-center justify-center text-white font-black text-2xl mb-4 relative overflow-hidden">
+                <span class="relative z-10">VNG</span>
+            </div>
+            <h1 class="text-xl font-bold text-slate-800 mb-1">Đăng nhập hệ thống CMS</h1>
+            <div class="space-y-4 mt-6 text-left">
+                <input type="text" id="username" placeholder="Tên đăng nhập" class="w-full bg-slate-50 border border-slate-300 p-3 rounded-lg text-slate-800 outline-none focus:border-blue-500">
+                <input type="password" id="password" placeholder="Mật khẩu" class="w-full bg-slate-50 border border-slate-300 p-3 rounded-lg text-slate-800 outline-none focus:border-blue-500">
+                <button onclick="handleLogin()" class="w-full bg-blue-600 text-white font-bold p-3 rounded-lg hover:bg-blue-700 transition-colors mt-2 shadow-md">ĐĂNG NHẬP VÀO CLOUD</button>
+                <p id="login-error" class="text-red-500 text-sm hidden mt-2 text-center">Sai thông tin đăng nhập!</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-app" class="w-full h-full flex flex-col hidden bg-white">
+        
+        <header class="header-top px-6 py-3 flex justify-between items-center z-40 shadow-sm">
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-xs shadow">PT</div>
+                    <span class="font-bold text-slate-800">Play Together Cloud</span>
+                </div>
+                <div id="tab-bar" class="flex gap-2 border-l border-slate-300 pl-6"></div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-1.5 border-r border-slate-300 pr-4" id="presence-list"></div>
+
+                <div class="relative">
+                    <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="🔍 Tìm nhanh..." class="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded text-sm outline-none focus:border-blue-500 w-56">
+                </div>
+                <button onclick="exportCSV()" class="bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded text-sm font-medium hover:bg-slate-50">📥 Xuất Excel</button>
+                <button id="btn-add-row" onclick="addRow()" class="hidden bg-blue-600 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-blue-700 shadow-sm">+ Thêm Dòng</button>
+                
+                <div class="pl-2 flex items-center gap-2">
+                    <div class="text-right">
+                        <p id="user-display" class="text-sm font-bold text-slate-800 leading-none"></p>
+                        <button onclick="logout()" class="text-[10px] text-red-500 hover:underline">Đăng xuất</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 p-4 overflow-hidden bg-slate-50" onclick="closeAllDropdowns()">
+            <div class="table-wrap">
+                <table class="w-full text-left border-collapse min-w-[2600px]" id="mainTable">
+                    <thead>
+                        <tr>
+                            <th class="sticky-col-1 w-[70px]">Update</th>
+                            <th class="sticky-col-2 w-[140px]">Pic</th>
+                            <th class="w-[250px]">Content Direction</th>
+                            <th class="w-[220px]">Content Pillar</th>
+                            <th class="w-[220px]">Content Angle</th>
+                            <th class="w-[180px]">Status</th>
+                            <th class="w-[300px]">Detail</th>
+                            <th class="w-[100px]">Deadline</th>
+                            <th class="w-[100px]">Air Time</th>
+                            <th class="w-[100px]">Air Date</th>
+                            <th class="w-[120px]">Thumb</th>
+                            <th class="w-[180px]">Channel</th>
+                            <th class="w-[250px]">Caption</th>
+                            <th class="w-[150px]">Source</th>
+                            <th class="w-[150px]">Output</th>
+                            <th class="w-[150px]">Link Air</th>
+                            <th id="th-action" class="w-[50px] text-center hidden">Xóa</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="divide-y divide-slate-200"></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <div id="toast" class="fixed bottom-[-100px] right-6 bg-slate-800 text-white px-4 py-3 rounded shadow-lg text-sm transition-all duration-300 z-50 flex items-center gap-2">
+        <span class="text-green-400 font-bold" id="toast-icon">✓</span> <span id="toast-msg">Đã lưu lên Cloud</span>
+    </div>
+
+    <script>
+        // ================= KẾT NỐI FIREBASE (ĐÃ NHÚNG CONFIG CỦA BẠN) =================
+        const firebaseConfig = {
+            apiKey: "AIzaSyCfHcZt8ZnfXa80uaQaKbdsmReCRmnw_Jw",
+            authDomain: "vng-cms.firebaseapp.com",
+            // Quan trọng: Firebase Realtime Database URL
+            databaseURL: "https://vng-cms-default-rtdb.asia-southeast1.firebasedatabase.app", 
+            projectId: "vng-cms",
+            storageBucket: "vng-cms.firebasestorage.app",
+            messagingSenderId: "644059130683",
+            appId: "1:644059130683:web:61ebcbec5077d86904251e",
+            measurementId: "G-XK3K2X8ZNR"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        // ==============================================================================
+
+        // SYSTEM ACCOUNTS
+        const USERS = {
+            "ddien0710": { pw: "Vng123456@", role: "ADMIN", name: "Bún Đậu" },
+            "chinnk2": { pw: "123", role: "EDITOR", name: "Chi" },
+            "Anhttv4": { pw: "321", role: "EDITOR", name: "Vân Anh" },
+            "User1": { pw: "1234", role: "VIEWER", name: "Khách" }
+        };
+
+        const PICS = ["Bún", "Vân Anh", "Chi", "Như", "CTV", "HieuVV"];
+        const PILLARS = ["I - Update review", "I - VVIP", "I - Tính năng", "I - Hướng dẫn", "I - Hộp bốc thăm", "O - Seasonal Camp"];
+        const ANGLES = ["Giới thiệu", "Hướng dẫn", "Hài hước", "Show off, Highlight", "Series, Film, Story", "Trailer, Teaser", "Đu trend"];
+        const STATUSES = ["Aired", "Đã thực hiện clip", "Đã set lịch", "Pending", "Đã có thumb", "đã req thumb", "THUMB"];
+        const CHANNELS = ["All", "TikTok", "Youtube", "Facebook"]; 
+
+        const COLOR_MAP = {
+            "I - Tính năng": "bg-purple-100 text-purple-700 border-purple-200", "I - Update review": "bg-blue-100 text-blue-700 border-blue-200",
+            "O - Seasonal Camp": "bg-orange-100 text-orange-700 border-orange-200", "I - VVIP": "bg-amber-100 text-amber-700 border-amber-200",
+            "I - Hướng dẫn": "bg-emerald-100 text-emerald-700 border-emerald-200", "I - Hộp bốc thăm": "bg-teal-100 text-teal-700 border-teal-200",
+            "Giới thiệu": "bg-sky-100 text-sky-700 border-sky-200", "Hướng dẫn": "bg-green-100 text-green-700 border-green-200",
+            "Hài hước": "bg-yellow-100 text-yellow-700 border-yellow-200", "Show off, Highlight": "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200",
+            "Series, Film, Story": "bg-indigo-100 text-indigo-700 border-indigo-200", "Trailer, Teaser": "bg-rose-100 text-rose-700 border-rose-200",
+            "Đu trend": "bg-pink-100 text-pink-700 border-pink-200", "Aired": "bg-emerald-100 text-emerald-700 border-emerald-200",
+            "Pending": "bg-orange-100 text-orange-700 border-orange-200", "Đã set lịch": "bg-blue-100 text-blue-700 border-blue-200",
+            "Đã thực hiện clip": "bg-cyan-100 text-cyan-700 border-cyan-200", "Đã có thumb": "bg-violet-100 text-violet-700 border-violet-200",
+            "đã req thumb": "bg-rose-100 text-rose-700 border-rose-200", "THUMB": "bg-slate-200 text-slate-700 border-slate-300",
+            "TikTok": "bg-slate-800 text-white border-slate-700", "Youtube": "bg-red-100 text-red-700 border-red-200",
+            "Facebook": "bg-blue-100 text-blue-700 border-blue-200", "All": "bg-teal-100 text-teal-700 border-teal-200",
+            "Bún": "bg-pink-100 text-pink-700 border-pink-200", "Vân Anh": "bg-indigo-100 text-indigo-700 border-indigo-200",
+            "Chi": "bg-cyan-100 text-cyan-700 border-cyan-200", "Như": "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200",
+            "CTV": "bg-slate-200 text-slate-700 border-slate-300", "HieuVV": "bg-amber-100 text-amber-700 border-amber-200"
+        };
+        function getColorTag(val) { return COLOR_MAP[val] || "bg-slate-100 text-slate-700 border-slate-200"; }
+
+        let user = null;
+        let activeIdx = 0;
+        let isFirstLoad = true;
+        
+        // Dữ liệu mẫu (sẽ được đẩy lên Firebase nếu Firebase trống)
+        let cms = {
+            tabs: ["Update 2.26", "Update 2.25", "Pack/Sale"],
+            data: [[{ c1: "2.26", c2: "Bún", c3: "Intro sự kiện Săn kho báu", c4: "I - Update review", c5: "Giới thiệu", c6: "Pending", c7: "Chấn động! Bản đồ cổ vừa được khai quật...", c8: "", c9: "16h00", c10: "13/04", c11: "", c12: "All", c13: "", c14: "", c15: "", c16: "" }], [], []]
+        };
+
+        const IDLE_TIME = 30000; 
+        const OFFLINE_TIME = 60000; 
+        let myPresenceRef = null;
+
+        function showToast(msg, icon = '✓') {
+            document.getElementById('toast-msg').innerText = msg;
+            document.getElementById('toast-icon').innerText = icon;
+            const t = document.getElementById('toast');
+            t.style.bottom = '24px';
+            setTimeout(() => t.style.bottom = '-100px', 2500);
+        }
+
+        function handleLogin() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            if (USERS[u] && USERS[u].pw === p) {
+                user = USERS[u];
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                initApp();
+            } else { document.getElementById('login-error').classList.remove('hidden'); }
+        }
+
+        function initApp() {
+            document.getElementById('user-display').innerText = user.name;
+            if (user.role === 'ADMIN') document.getElementById('th-action').classList.remove('hidden');
+            if (user.role !== 'VIEWER') document.getElementById('btn-add-row').classList.remove('hidden');
+
+            // --- 1. KẾT NỐI HỆ THỐNG ONLINE (PRESENCE) ---
+            myPresenceRef = db.ref('presence/' + user.name);
+            myPresenceRef.set({ name: user.name, lastActive: Date.now() });
+            myPresenceRef.onDisconnect().remove(); // Ma thuật của Firebase: Tắt trình duyệt là tự xóa tên
+
+            window.lastWrite = Date.now();
+            ['mousemove', 'keydown', 'click', 'scroll'].forEach(evt => {
+                window.addEventListener(evt, () => {
+                    if(user && Date.now() - window.lastWrite > 5000) {
+                        myPresenceRef.update({ lastActive: Date.now() });
+                        window.lastWrite = Date.now();
+                    }
+                });
+            });
+
+            db.ref('presence').on('value', snap => {
+                const users = snap.val() || {};
+                renderPresenceUI(users);
+            });
+
+            // --- 2. KẾT NỐI DỮ LIỆU BẢNG (REALTIME SYNC) ---
+            db.ref('cmsData').on('value', snap => {
+                const cloudData = snap.val();
+                if (cloudData) {
+                    // Cập nhật dữ liệu từ Cloud về máy
+                    cms.tabs = cloudData.tabs || [];
+                    cms.data = [];
+                    // Xử lý để Firebase không làm mất mảng rỗng
+                    for(let i = 0; i < cms.tabs.length; i++) {
+                        cms.data.push(cloudData.data && cloudData.data[i] ? cloudData.data[i] : []);
+                    }
+                    if(!isFirstLoad) showToast('🔄 Dữ liệu vừa được cập nhật', 'ℹ️');
+                } else {
+                    // Nếu Firebase mới tinh chưa có gì, lấy dữ liệu mẫu đẩy lên
+                    db.ref('cmsData').set(cms);
+                }
+                renderTabs();
+                renderTable();
+                isFirstLoad = false;
+            });
+        }
+
+        function renderPresenceUI(users) {
+            const container = document.getElementById('presence-list');
+            container.innerHTML = '';
+            const now = Date.now();
+
+            Object.values(users).forEach(u => {
+                const diff = now - u.lastActive;
+                if (diff > OFFLINE_TIME) return; // Quá lâu không thao tác coi như Offline
+
+                const isIdle = diff > IDLE_TIME;
+                const opacityClass = isIdle ? 'opacity-40 grayscale' : 'opacity-100';
+                const dotColor = isIdle ? 'bg-yellow-400' : 'bg-green-500';
+                const statusText = isIdle ? 'Đang treo máy' : 'Đang hoạt động';
+                const initial = u.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+
+                container.innerHTML += `
+                    <div class="relative group cursor-pointer avatar-transition ${opacityClass}" title="${u.name} - ${statusText}">
+                        <div class="w-8 h-8 rounded-full bg-blue-100 border border-blue-200 text-blue-700 font-bold text-xs flex items-center justify-center shadow-sm">
+                            ${initial}
+                        </div>
+                        <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 ${dotColor} border-2 border-white rounded-full"></div>
+                    </div>
+                `;
+            });
+        }
+
+        function logout() {
+            if(myPresenceRef) myPresenceRef.remove();
+            location.reload();
+        }
+
+        // --- CÁC HÀM XỬ LÝ GIAO DIỆN VÀ ĐẨY DỮ LIỆU LÊN FIREBASE ---
+        function renderTabs() {
+            const bar = document.getElementById('tab-bar');
+            bar.innerHTML = '';
+            cms.tabs.forEach((name, i) => {
+                const isActive = i === activeIdx;
+                bar.innerHTML += `
+                    <div onclick="switchTab(${i})" class="group flex items-center px-3 py-1.5 rounded text-sm cursor-pointer font-medium ${isActive ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}">
+                        ${name}
+                        ${user.role === 'ADMIN' ? `<span onclick="deleteTab(event, ${i})" class="hidden group-hover:inline-block ml-2 text-red-500 hover:text-red-700 text-xs">✕</span>` : ''}
+                    </div>
+                `;
+            });
+            if(user.role === 'ADMIN') bar.innerHTML += `<button onclick="addTab()" class="text-blue-600 hover:text-blue-800 text-sm font-medium px-2">+ Tab</button>`;
+        }
+
+        function switchTab(i) { activeIdx = i; renderTabs(); renderTable(); }
+
+        function getMultiSelect(idx, col, options, valuesStr, isViewer) {
+            let values = valuesStr ? valuesStr.split(',').map(v=>v.trim()).filter(v=>v) : [];
+            let tags = values.map(v => `<span class="inline-flex items-center ${getColorTag(v)} border rounded px-1.5 py-0.5 text-[11px] m-0.5 whitespace-nowrap font-semibold shadow-sm">${v}</span>`).join('');
+            if(!tags) tags = `<span class="text-slate-400 text-xs italic p-1">Chọn...</span>`;
+
+            let dropdown = `<div class="absolute top-full left-0 min-w-[200px] bg-white border border-slate-200 shadow-xl rounded-md z-50 max-h-56 overflow-y-auto hidden flex-col mt-1 dropdown-menu" id="dd-${idx}-${col}">`;
+            options.forEach(opt => {
+                let checked = values.includes(opt) ? 'checked' : '';
+                dropdown += `
+                <label class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer text-xs text-slate-700 border-b border-slate-50 last:border-0" onclick="event.stopPropagation()">
+                    <input type="checkbox" ${checked} ${isViewer ? 'disabled' : ''} onchange="toggleMulti(${idx}, '${col}', '${opt}', this)">
+                    <span class="inline-flex items-center ${getColorTag(opt)} border rounded px-1.5 py-0.5 text-[11px] font-semibold">${opt}</span>
+                </label>`;
+            });
+            dropdown += `</div>`;
+
+            return `<div class="relative w-full" ${!isViewer ? `onclick="toggleDD('dd-${idx}-${col}', event)"` : ''}>
+                <div class="input-cell cursor-pointer flex flex-wrap items-center min-h-[34px] border border-transparent hover:border-slate-200 bg-transparent">${tags}</div>
+                ${!isViewer ? dropdown : ''}
+            </div>`;
+        }
+
+        function toggleDD(id, e) {
+            e.stopPropagation();
+            const target = document.getElementById(id);
+            const isHidden = target.classList.contains('hidden');
+            closeAllDropdowns();
+            if (isHidden) { target.classList.remove('hidden'); target.classList.add('flex'); }
+        }
+
+        function closeAllDropdowns() {
+            document.querySelectorAll('.dropdown-menu').forEach(dd => { dd.classList.add('hidden'); dd.classList.remove('flex'); });
+        }
+
+        function toggleMulti(idx, col, opt, cbElement) {
+            let row = cms.data[activeIdx][idx];
+            let values = row[col] ? row[col].split(',').map(v=>v.trim()).filter(v=>v) : [];
+            if(cbElement.checked) { if(!values.includes(opt)) values.push(opt); } 
+            else { values = values.filter(v => v !== opt); }
+            row[col] = values.join(', ');
+            saveToCloud(); // ĐẨY LÊN FIREBASE
+            
+            let container = cbElement.closest('.relative').querySelector('.input-cell');
+            let tags = values.map(v => `<span class="inline-flex items-center ${getColorTag(v)} border rounded px-1.5 py-0.5 text-[11px] m-0.5 whitespace-nowrap font-semibold shadow-sm">${v}</span>`).join('');
+            if(!tags) tags = `<span class="text-slate-400 text-xs italic p-1">Chọn...</span>`;
+            container.innerHTML = tags;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            const rows = cms.data[activeIdx] || [];
+            const isViewer = user.role === 'VIEWER';
+
+            rows.forEach((row, i) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-blue-50/40 group";
+                tr.innerHTML = `
+                    <td class="p-2 sticky-col-1 group-hover:bg-blue-50/40"><input ${isViewer?'disabled':''} onchange="up(${i},'c1',this.value)" value="${row.c1||''}" class="input-cell font-mono text-slate-500 text-center"></td>
+                    <td class="p-2 sticky-col-2 group-hover:bg-blue-50/40">${getMultiSelect(i, 'c2', PICS, row.c2, isViewer)}</td>
+                    <td class="p-2"><input ${isViewer?'disabled':''} onchange="up(${i},'c3',this.value)" value="${row.c3||''}" class="input-cell font-semibold text-slate-800"></td>
+                    <td class="p-2">${getMultiSelect(i, 'c4', PILLARS, row.c4, isViewer)}</td>
+                    <td class="p-2">${getMultiSelect(i, 'c5', ANGLES, row.c5, isViewer)}</td>
+                    <td class="p-2">${getMultiSelect(i, 'c6', STATUSES, row.c6, isViewer)}</td>
+                    <td class="p-2 relative"><textarea ${isViewer?'disabled':''} onchange="up(${i},'c7',this.value)" class="input-cell textarea-expand" placeholder="Chi tiết...">${row.c7||''}</textarea></td>
+                    <td class="p-2"><input ${isViewer?'disabled':''} onchange="up(${i},'c8',this.value)" value="${row.c8||''}" class="input-cell text-red-600 font-mono text-xs"></td>
+                    <td class="p-2"><input ${isViewer?'disabled':''} onchange="up(${i},'c9',this.value)" value="${row.c9||''}" class="input-cell font-mono text-xs"></td>
+                    <td class="p-2"><input ${isViewer?'disabled':''} onchange="up(${i},'c10',this.value)" value="${row.c10||''}" class="input-cell font-mono text-xs"></td>
+                    <td class="p-2"><input ${isViewer?'disabled':''} onchange="up(${i},'c11',this.value)" value="${row.c11||''}" class="input-cell text-slate-500"></td>
+                    <td class="p-2">${getMultiSelect(i, 'c12', CHANNELS, row.c12, isViewer)}</td>
+                    <td class="p-2 relative"><textarea ${isViewer?'disabled':''} onchange="up(${i},'c13',this.value)" class="input-cell textarea-expand" placeholder="Caption...">${row.c13||''}</textarea></td>
+                    <td class="p-2"><input ${isViewer?'disabled':''} onchange="up(${i},'c14',this.value)" value="${row.c14||''}" class="input-cell"></td>
+                    <td class="p-2"><input ${isViewer?'disabled':''} onchange="up(${i},'c15',this.value)" value="${row.c15||''}" class="input-cell text-blue-600 hover:underline"></td>
+                    <td class="p-2"><input ${isViewer?'disabled':''} onchange="up(${i},'c16',this.value)" value="${row.c16||''}" class="input-cell text-blue-600 hover:underline"></td>
+                    <td class="p-2 text-center ${user.role!=='ADMIN'?'hidden':''}"><button onclick="delRow(${i})" class="text-slate-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition font-bold p-1">✕</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function addRow() {
+            let ver = cms.tabs[activeIdx].replace('Update ', '');
+            if(!ver.includes('.')) ver = '';
+            cms.data[activeIdx].unshift({ c1: ver, c2: user.name.split(' ')[0], c4: PILLARS[0], c5: ANGLES[0], c6: STATUSES[3], c12: CHANNELS[0] });
+            saveToCloud();
+        }
+
+        function addTab() {
+            const t = prompt("Nhập tên Tab mới:");
+            if(t) { cms.tabs.push(t); cms.data.push([]); saveToCloud(); }
+        }
+
+        function deleteTab(e, i) {
+            e.stopPropagation();
+            if(confirm(`Xác nhận xóa toàn bộ Tab ${cms.tabs[i]}?`)) { 
+                cms.tabs.splice(i,1); cms.data.splice(i,1); activeIdx=0; saveToCloud(); 
+            }
+        }
+
+        function up(idx, col, val) { cms.data[activeIdx][idx][col] = val; saveToCloud(); }
+        function delRow(i) { if(confirm('Xác nhận xóa dòng này?')) { cms.data[activeIdx].splice(i,1); saveToCloud(); } }
+        
+        // HÀM LƯU DỮ LIỆU LÊN FIREBASE REALTIME DB
+        function saveToCloud() { 
+            db.ref('cmsData').set(cms); 
+            showToast('Đã lưu lên Cloud', '☁️');
+        }
+
+        function filterTable() {
+            const input = document.getElementById("searchInput").value.toLowerCase();
+            const trs = document.getElementById("table-body").getElementsByTagName("tr");
+            for (let i = 0; i < trs.length; i++) {
+                const inputs = trs[i].querySelectorAll('input, select, textarea');
+                let inputData = Array.from(inputs).map(el => el.value).join(' ').toLowerCase();
+                const textData = trs[i].textContent || trs[i].innerText;
+                trs[i].style.display = (inputData + textData).toLowerCase().includes(input) ? "" : "none";
+            }
+        }
+
+        function exportCSV() {
+            let csv = ["Update,Pic,Content direction,Content Pillar,Content Angle,Status,Detail,Deadline,Air time,Air date,Thumb,Channel,Caption,Source,Output,Link air"];
+            cms.data[activeIdx].forEach(r => {
+                let row = [ r.c1, r.c2, r.c3, r.c4, r.c5, r.c6, r.c7, r.c8, r.c9, r.c10, r.c11, r.c12, r.c13, r.c14, r.c15, r.c16 ]
+                    .map(v => `"${(v||'').replace(/"/g, '""')}"`);
+                csv.push(row.join(","));
+            });
+            const blob = new Blob(["\uFEFF"+csv.join("\n")], {type: "text/csv;charset=utf-8;"});
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `VNG_Plan_${cms.tabs[activeIdx].replace(' ', '_')}.csv`;
+            link.click();
+        }
+    </script>
+</body>
+</html>
