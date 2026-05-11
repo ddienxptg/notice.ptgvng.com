@@ -26,10 +26,11 @@
             position: relative;
         }
         
+        /* CSS Nút Trở Lại đã được tối ưu chống đè chữ trên mobile */
         .back-button {
-            position: absolute;
-            top: 20px;
-            left: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
             background-color: #ffffff;
             border: 2px solid #ff66a3;
             color: #ff66a3;
@@ -38,11 +39,22 @@
             text-decoration: none;
             font-weight: bold;
             transition: all 0.3s ease;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            margin-bottom: 15px;
         }
+        
+        /* Trên máy tính (màn hình rộng), nút sẽ cố định ở góc trái */
+        @media (min-width: 768px) {
+            .back-button {
+                position: absolute;
+                top: 20px;
+                left: 20px;
+                margin-bottom: 0;
+            }
+            .main-title {
+                padding-top: 20px; 
+            }
+        }
+        
         .back-button:hover {
             background-color: #ff66a3;
             color: #fff;
@@ -55,7 +67,6 @@
             text-align: center;
             margin-bottom: 5px;
             text-transform: uppercase;
-            padding-top: 20px; 
         }
         .time-line {
             text-align: right;
@@ -110,9 +121,10 @@
         <h2 class="main-title">[SỰ KIỆN] MƯA SAO BĂNG</h2>
         <div class="time-line">Ngày đăng: 11-05-2026</div>
 
-        <p style="font-weight: 500; color: #444;">📅 Thời gian sự kiện: Sau bảo trì ngày 28/05 ~ 11/06 lúc 06:59 (Giờ Việt Nam)</p>
-        Bùm! Mưa sao băng đột ngột xuất hiện ở Plaza yên bình?<br>
-        Từ những trận đấu nấu ăn bùng nổ trên bãi biển, đến hành trình giải cứu các vì sao trên bầu trời đêm! Hãy tạo nên những kỷ niệm tháng 5 khó quên tại đảo Kaia, nơi hai lễ hội với hai sắc màu khác nhau đang chờ đón bạn!<p></p>
+        
+        
+        <p>Bùm! Mưa sao băng đột ngột xuất hiện ở Plaza yên bình?<br>
+        Từ những trận đấu nấu ăn bùng nổ trên bãi biển, đến hành trình giải cứu các vì sao trên bầu trời đêm! Hãy tạo nên những kỷ niệm tháng 5 khó quên tại đảo Kaia, nơi hai lễ hội với hai sắc màu khác nhau đang chờ đón bạn!</p>
         <img src="https://ddienxptg.github.io/notice.ptgvng.com/260511_01.png" class="update-img">
 
         <span class="section-header">▶ Truy tìm: Tung tích của những vì sao biến mất</span>
@@ -144,7 +156,7 @@
         - Hạt giống ngân hà mới: Hạt giống trăng khuyết, Hạt giống tiểu hành tinh, Hạt giống cây sao mai, Hạt giống hoa chùm sao.</p>
         <img src="https://ddienxptg.github.io/notice.ptgvng.com/260511_07.png" class="update-img">
 
-        <span class="section-header">▶ Hạt giống ngân hà mới</span>
+        <span class="section-header">▶ Cập nhật các loại Hạt giống ngân hà mới</span>
         <p>Hệ thống nông trại Đảo Kaia chính thức cập nhật thêm các loại giống cây trồng mới lạ đến từ các tinh cầu xa xôi. Hãy cùng gieo trồng và chăm sóc chúng nhé: Hạt giống trăng khuyết, Hạt giống tiểu hành tinh, Hạt giống cây sao mai, Hạt giống hoa chùm sao.</p>
         <img src="https://ddienxptg.github.io/notice.ptgvng.com/260511_08.png" class="update-img">
 
