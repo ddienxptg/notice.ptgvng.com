@@ -49,6 +49,7 @@
             text-decoration: none;
         }
 
+        /* Đổi màu text tiêu đề chính sang mã màu d63384 */
         .custom-main-title {
             font-size: 26px;
             font-weight: bold;
@@ -58,7 +59,7 @@
             margin-top: 25px;
             margin-bottom: 15px;
             line-height: 1.3;
-            color: #333;
+            color: #d63384; 
         }
 
         .time-line {
@@ -93,9 +94,12 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.08);
         }
 
-        iframe {
-            border-radius: 10px;
+        .video-wrapper {
+            max-width: 640px;
+            width: 100%;
             margin: 15px 0;
+            border-radius: 10px;
+            overflow: hidden;
             box-shadow: 0 4px 10px rgba(0,0,0,0.08);
         }
 
@@ -149,7 +153,13 @@
 
         <div class="section-block">
             🍣 Sự kiện Thử thách vua sushi | Thu thập nguyên liệu, chế biến sushi và cùng thử thách trở thành vua sushi truyền thuyết nhé!<br>
-            <iframe width="640" height="360" src="https://www.youtube.com/embed/LP92JOPLptc" title="PLAY TOGETHER VNG | BẠN ĐÃ SẴN SÀNG ĐÓN THỬ THÁCH TỪ VUA SUSHI? BẢN CẬP NHẬT MỚI THỬ THÁCH VUA SUSHI" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe>
+            
+            <div class="video-wrapper">
+                <div class="ratio ratio-16x9">
+                    <iframe src="https://www.youtube.com/embed/LP92JOPLptc" title="PLAY TOGETHER VNG | BẠN ĐÃ SẴN SÀNG ĐÓN THỬ THÁCH TỪ VUA SUSHI? BẢN CẬP NHẬT MỚI THỬ THÁCH VUA SUSHI" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe>
+                </div>
+            </div>
+
             <div class="bullet-list">
                 • Hãy câu Cá béo và nhiều loại cá khác nhau để thu thập nguyên liệu làm sushi nào.<br>
                 • Vừa làm sushi vừa thực hiện các sứ mệnh và nhiệm vụ NPC để nhận Xu bậc thầy cùng phần thưởng nhé.<br>
